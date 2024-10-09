@@ -8,6 +8,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.javalin.Javalin
 import io.javalin.router.JavalinDefaultRouting
+import ksb.Serialization.convertTo
 import java.io.Closeable
 import java.io.InputStream
 import java.net.URI
@@ -138,6 +139,9 @@ object ksb {
 
         fun InputStream.readText(): String =
             bufferedReader().use { it.readText() }
+
+        inline fun <reified T> InputStream.readAsObject(): T =
+            readText().convertTo()
 
     }
 }

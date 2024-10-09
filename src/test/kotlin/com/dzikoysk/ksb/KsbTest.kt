@@ -2,6 +2,7 @@
 
 package com.dzikoysk.ksb
 
+import ksb.IO.readAsObject
 import ksb.IO.readText
 import ksb.Serialization.convertTo
 import ksb.Serialization.toJson
@@ -35,7 +36,7 @@ inner class Http {
                 .use { (_, url) -> ksb.http.get("$url/api") }
 
         assert(response.statusCode == 200)
-        assert(response.body.readText().convertTo<Monke>() == Monke("Młynarz"))
+        assert(response.body.readAsObject<Monke>() == Monke("Młynarz"))
     }
 }
 

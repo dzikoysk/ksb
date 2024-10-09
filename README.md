@@ -18,11 +18,6 @@ val deserializedObject: Monke = json.convertTo()
 
 #### HTTP
 
-Interacting with the API:
-
-* `val (body, statusCode, headers) = ksb.http.get("https://github.com/dzikoysk/ksb")`
-* `val (body, statusCode, headers) = ksb.http.post("https://github.com/dzikoysk/ksb")`
-
 Serving the API:
 
 ```kotlin
@@ -30,4 +25,13 @@ val (server, address) = ksb.http.server.start {
     get("/api/read") { it.result("Monke") }
     post("/api/write") { println(it.body()) }
 }
+```
+
+Interacting with the API:
+
+* `val (body, statusCode, headers) = ksb.http.get("https://github.com/dzikoysk/ksb")`
+* `val (body, statusCode, headers) = ksb.http.post("https://github.com/dzikoysk/ksb")`
+
+```kotlin
+val monke = body.readText() / body.readAsObject<Monke>()
 ```
