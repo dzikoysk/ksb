@@ -68,22 +68,22 @@ object ksb {
         fun get(url: String, headers: Map<String, Any> = emptyMap()): KsbHttpResponse =
             sendRequest(KsbHttpMethod.GET, url, null, headers)
 
-        fun post(url: String, value: Any, headers: Map<String, Any> = emptyMap()): KsbHttpResponse =
+        fun post(url: String, value: String, headers: Map<String, Any> = emptyMap()): KsbHttpResponse =
             sendRequest(KsbHttpMethod.POST, url, value, headers)
 
-        fun put(url: String, value: Any, headers: Map<String, Any> = emptyMap()): KsbHttpResponse =
+        fun put(url: String, value: String, headers: Map<String, Any> = emptyMap()): KsbHttpResponse =
             sendRequest(KsbHttpMethod.PUT, url, value, headers)
 
-        fun patch(url: String, value: Any, headers: Map<String, Any> = emptyMap()): KsbHttpResponse =
+        fun patch(url: String, value: String, headers: Map<String, Any> = emptyMap()): KsbHttpResponse =
             sendRequest(KsbHttpMethod.PATCH, url, value, headers)
 
-        fun update(url: String, value: Any, headers: Map<String, Any> = emptyMap()): KsbHttpResponse =
+        fun update(url: String, value: String, headers: Map<String, Any> = emptyMap()): KsbHttpResponse =
             sendRequest(KsbHttpMethod.UPDATE, url, value, headers)
 
         fun delete(url: String, headers: Map<String, Any> = emptyMap()): KsbHttpResponse =
             sendRequest(KsbHttpMethod.DELETE, url, null, headers)
 
-        private fun sendRequest(method: KsbHttpMethod, url: String, value: Any?, headers: Map<String, Any> = emptyMap()): KsbHttpResponse {
+        private fun sendRequest(method: KsbHttpMethod, url: String, value: String?, headers: Map<String, Any> = emptyMap()): KsbHttpResponse {
             val request =
                 HttpRequest.newBuilder()
                     .uri(URI.create(url))
@@ -142,6 +142,17 @@ object ksb {
 
         inline fun <reified T> InputStream.readAsObject(): T =
             readText().convertTo()
+
+    }
+
+    object DataTypes {
+
+        data class Quad<A, B, C, D>(
+            val first: A,
+            val second: B,
+            val third: C,
+            val fourth: D,
+        )
 
     }
 }

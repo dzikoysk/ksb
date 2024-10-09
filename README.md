@@ -13,9 +13,11 @@ dependencies {
 }
 ```
 
-### Docs
+## Docs
 
-#### Serialization
+### Serialization
+
+* JSON
 
 ```kotlin
 data class Monke(
@@ -26,7 +28,9 @@ val json: String = Monke("Młynarz").toJson() // available for any object
 val deserializedObject: Monke = json.convertTo()
 ```
 
-#### HTTP
+* CSV _(todo)_
+
+### HTTP
 
 Serving the API:
 
@@ -39,9 +43,24 @@ val (server, address) = ksb.http.server.start {
 
 Interacting with the API:
 
-* `val (body, statusCode, headers) = ksb.http.get("https://github.com/dzikoysk/ksb")`
-* `val (body, statusCode, headers) = ksb.http.post("https://github.com/dzikoysk/ksb")`
-
 ```kotlin
+val (_, statusCode, headers) = ksb.http.head("https://github.com/dzikoysk/ksb")
+val (body, statusCode, headers) = ksb.http.get("https://github.com/dzikoysk/ksb")
+val (body, statusCode, headers) = ksb.http.delete("https://github.com/dzikoysk/ksb")
+
+val (body, statusCode, headers) = ksb.http.post("https://github.com/dzikoysk/ksb", Monke("Młynarz").toJson())
+val (body, statusCode, headers) = ksb.http.update("https://github.com/dzikoysk/ksb", Monke("Młynarz").toJson())
+
+val (body, statusCode, headers) = ksb.http.patch(
+    url = "https://github.com/dzikoysk/ksb", 
+    value = Monke("Młynarz").toJson(),
+    headers = mapOf("X-API-KEY" to "123")
+)
+
 val monke = body.readText() / body.readAsObject<Monke>()
 ```
+
+#### Cloud
+
+* AWS S3 _(todo)_
+* Google Drive _(todo)_
