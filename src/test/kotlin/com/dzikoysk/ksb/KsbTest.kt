@@ -10,14 +10,14 @@ import org.junit.jupiter.api.Test
 
 class KsbTest {
 
+    private data class Monke(
+        val name: String
+    )
+
     @Nested
     inner class Serialization {
         @Test
         fun `serialization works`() {
-            data class Monke(
-                val name: String
-            )
-
             val json = Monke("Młynarz").toJson()
             val deserializedObject = json.convertTo<Monke>()
 
@@ -25,18 +25,18 @@ class KsbTest {
         }
     }
 
-    @Nested
-    inner class Http {
-        @Test
-        fun `http works`() {
-            val response =
-                ksb.http.server
-                    .start { get("/api") { it.result("Monke") } }
-                    .use { (_, url) -> ksb.http.get("$url/api") }
+@Nested
+inner class Http {
+    @Test
+    fun `http works`() {
+        val response =
+            ksb.http.server
+                .start { get("/api") { it.json(Monke("Młynarz")) } }
+                .use { (_, url) -> ksb.http.get("$url/api") }
 
-            assert(response.statusCode == 200)
-            assert(response.body.readText() == "Monke")
-        }
+        assert(response.statusCode == 200)
+        assert(response.body.readText().convertTo<Monke>() == Monke("Młynarz"))
     }
+}
 
 }

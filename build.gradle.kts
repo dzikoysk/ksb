@@ -82,6 +82,9 @@ dependencies {
     implementation("com.konghq:unirest-java-core:$unirest")
     implementation("com.konghq:unirest-modules-jackson:$unirest")
 
+    val logback = "1.4.12"
+    implementation("ch.qos.logback:logback-classic:$logback")
+
     testImplementation(kotlin("test"))
 }
 
