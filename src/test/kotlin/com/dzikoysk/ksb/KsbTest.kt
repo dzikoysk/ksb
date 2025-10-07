@@ -2,6 +2,7 @@
 
 package com.dzikoysk.ksb
 
+import ksb
 import ksb.IO.readAsObject
 import ksb.IO.readText
 import ksb.Serialization.convertTo
@@ -26,18 +27,35 @@ class KsbTest {
         }
     }
 
-@Nested
-inner class Http {
-    @Test
-    fun `http works`() {
-        val response =
-            ksb.http.server
-                .start { get("/api") { it.json(Monke("Młynarz")) } }
-                .use { (_, url) -> ksb.http.get("$url/api") }
+    @Nested
+    inner class Http {
+        @Test
+        fun `http works`() {
+            val response =
+                ksb.http.server
+                    .start { get("/api") { it.json(Monke("Młynarz")) } }
+                    .use { (_, url) -> ksb.http.get("$url/api") }
 
-        assert(response.statusCode == 200)
-        assert(response.body.readAsObject<Monke>() == Monke("Młynarz"))
+            assert(response.statusCode == 200)
+            assert(response.body.readAsObject<Monke>() == Monke("Młynarz"))
+        }
+
+        @Nested
+        inner class GraphQL {
+            @Test
+            fun `graphlql works`() {
+                data class Monke(val name: String)
+                data class MonkeData(val monke: Monke)
+
+                val response =
+                    ksb.http.server
+                        .start { post("/graphql") { it.result("""{ "data": { "monke": { "name": "Młynarz" } } } }""") } }
+                        .use { (_, url) -> ksb.http.gql.query<MonkeData>("$url/graphql", mapOf("x-api-key" to "123")) { "query Monke { name }" } }
+
+                assert(response.isSuccess)
+                assert(response.get().data.monke == Monke("Młynarz"))
+            }
+        }
     }
-}
 
 }
