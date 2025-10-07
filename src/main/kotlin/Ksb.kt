@@ -17,6 +17,10 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.charset.Charset
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.typeOf
 
@@ -24,7 +28,6 @@ import kotlin.reflect.typeOf
 object ksb {
 
     val serialization = Serialization
-    val http = Http
 
     object Serialization {
 
@@ -52,6 +55,8 @@ object ksb {
             objectMapper.writeValueAsString(this)
 
     }
+
+    val http = Http
 
     object Http {
 
@@ -180,6 +185,20 @@ object ksb {
 
         inline fun <reified T> InputStream.readAsObject(): T =
             readText().convertTo()
+
+    }
+
+    val fs = FS
+
+    object FS {
+
+        fun override(path: String, content: () -> String) {
+            val path = Path.of(path).toAbsolutePath()
+            Files.createDirectories(path.parent)
+            Files.writeString(path, content(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)
+        }
+
+        fun read(path: String): List<String> = Files.readAllLines(Path.of(path))
 
     }
 

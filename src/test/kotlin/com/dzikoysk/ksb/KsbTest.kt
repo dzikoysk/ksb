@@ -9,6 +9,7 @@ import ksb.Serialization.convertTo
 import ksb.Serialization.toJson
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import java.nio.file.Files
 
 class KsbTest {
 
@@ -56,6 +57,20 @@ class KsbTest {
                 assert(response.get().data.monke == Monke("Młynarz"))
             }
         }
+    }
+
+    @Nested
+    inner class Fs {
+
+        @Test
+        fun `fs works`() {
+            val testDirectory = Files.createTempDirectory("ksb")
+            val path = testDirectory.resolve("monke.txt").toString()
+
+            ksb.fs.override(path) { "Młynarz" }
+            assert(ksb.fs.read(path) == listOf("Młynarz"))
+        }
+
     }
 
 }

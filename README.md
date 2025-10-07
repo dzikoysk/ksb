@@ -66,6 +66,27 @@ val (body, statusCode, headers) = ksb.http.patch(
 val monke = body.readText() / body.readAsObject<Monke>()
 ```
 
+GraphQL
+
+```kotlin
+data class MonkeData(val monke: Monke) {
+    data class Monke(val name: String)
+}
+
+val response = ksb.http.gql.query<MonkeData>("$url/graphql", mapOf("x-api-key" to "secret")) { 
+    "query Monke { name }" 
+}
+
+val monke: Monke = response.get().data.monke
+```
+
+### File System
+
+```kotlin
+ksb.fs.override("monke.txt") { "Monke" }
+val content = ksb.fs.read("monke.txt")
+```
+
 ### SQL
 
 * JDBI
