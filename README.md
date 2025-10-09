@@ -87,6 +87,42 @@ ksb.fs.override("monke.txt") { "Monke" }
 val content = ksb.fs.read("monke.txt")
 ```
 
+### CSV
+
+* Using rows
+
+```kotlin
+val elements = listOf(1, 2, 3)
+
+val csv = ksb.csv.rows(elements) {
+    cell { "input" to it }
+    cell { "double" to it * 2 }
+    cell { "triple" to it * 3 }
+}
+
+// input,double,triple
+// 1,2,3
+// 2,4,6
+// 3,6,9
+csv.toString()
+
+// input,double,triple
+// 3,6,9
+// 2,4,6
+// 1,2,3
+csv.toString(sortedBy = listOf("triple" to DESC))
+```
+
+* Using columns
+
+```kotlin
+ksb.csv(
+    "input" to listOf(1, 2, 3),
+    "double" to listOf(2, 4, 6),
+    "triple" to listOf(3, 6, 9),
+)
+```
+
 ### SQL
 
 * JDBI

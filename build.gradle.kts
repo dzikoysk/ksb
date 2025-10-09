@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "com.dzikoysk"
-version = "0.0.2-SNAPSHOT"
+version = "0.0.3-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -39,11 +39,11 @@ publishing {
 
 dependencies {
     val jackson = "2.18.0"
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:$jackson")
+    api("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson")
+    api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson")
+    api("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:$jackson")
 
-    val javalin = "6.3.0"
+    val javalin = "6.6.0"
     api("io.javalin:javalin:$javalin")
     api("io.javalin.community.ssl:ssl-plugin:$javalin")
 
@@ -60,14 +60,14 @@ dependencies {
     api("info.picocli:picocli:$picocli")
 
     val awssdk = "2.28.16"
-    implementation(platform("software.amazon.awssdk:bom:$awssdk"))
-    implementation("software.amazon.awssdk:s3:$awssdk")
+    api(platform("software.amazon.awssdk:bom:$awssdk"))
+    api("software.amazon.awssdk:s3:$awssdk")
 
     val awsSdkV1 = "1.12.773"
     testImplementation("com.amazonaws:aws-java-sdk-s3:$awsSdkV1")
 
     val bcrypt = "0.10.2"
-    implementation("at.favre.lib:bcrypt:$bcrypt")
+    api("at.favre.lib:bcrypt:$bcrypt")
 
     val jdbi = "3.41.3"
     api("org.jdbi:jdbi3-core:$jdbi")
@@ -79,11 +79,11 @@ dependencies {
     api("org.jdbi:jdbi3-jackson2:$jdbi")
 
     val unirest = "4.4.4"
-    implementation("com.konghq:unirest-java-core:$unirest")
-    implementation("com.konghq:unirest-modules-jackson:$unirest")
+    api("com.konghq:unirest-java-core:$unirest")
+    api("com.konghq:unirest-modules-jackson:$unirest")
 
-    val logback = "1.4.12"
-    implementation("ch.qos.logback:logback-classic:$logback")
+    val logback = "1.5.13"
+    api("ch.qos.logback:logback-classic:$logback")
 
     testImplementation(kotlin("test"))
 }

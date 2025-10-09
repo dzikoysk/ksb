@@ -17,12 +17,13 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.typeOf
+
+typealias ColumnName = String
 
 @Suppress("unused", "ClassName", "MemberVisibilityCanBePrivate")
 object ksb {
@@ -199,6 +200,116 @@ object ksb {
         }
 
         fun read(path: String): List<String> = Files.readAllLines(Path.of(path))
+
+    }
+
+    val csv = Csv
+
+    object Csv {
+
+        enum class SortOrder {
+            ASC, DESC
+        }
+
+        operator fun invoke(vararg columns: Pair<ColumnName, List<Any?>>): CsvSource {
+            val csvSource = CsvSource()
+
+            val rowCount =
+                columns
+                    .map { it.second.size }
+                    .distinct()
+                    .singleOrNull()
+                    ?: throw IllegalArgumentException("All columns must have the same number of rows")
+
+            for (idx in 0 until rowCount) {
+                columns.forEach { (column, values) ->
+                    csvSource.cell { column to values[idx] }
+                }
+                csvSource.flushRow()
+            }
+
+            return csvSource
+        }
+
+        fun <T> rows(input: Collection<T>, body: CsvSource.(T) -> Unit): CsvSource {
+            val csvSource = CsvSource()
+            input.forEach {
+                csvSource.apply { body(it) }
+                csvSource.flushRow()
+            }
+            return csvSource
+        }
+
+        class CsvSource {
+
+            data class Cell(
+                val column: ColumnName,
+                val value: Any?,
+            )
+
+            private val rows = mutableListOf<List<Cell>>()
+            private val currentRow = mutableListOf<Cell>()
+
+            fun cell(body: () -> Pair<ColumnName, Any?>) {
+                body().let { (column, value) ->
+                    currentRow.add(
+                        Cell(
+                            column = column,
+                            value = when (value) {
+                                is String -> "\"${value.replace("\"", "\"\"")}\""
+                                else -> value
+                            },
+                        )
+                    )
+                }
+            }
+
+            internal fun flushRow() {
+                rows.add(currentRow.toList())
+                currentRow.clear()
+            }
+
+            fun toString(
+                sortedBy: List<Pair<ColumnName, SortOrder>> = emptyList(),
+                default: String = "",
+            ): String {
+                if (rows.isEmpty()) {
+                    return default
+                }
+
+                val columns = rows.first().map { it.column }
+                val header = columns.joinToString(",")
+
+                val comparators =
+                    sortedBy
+                        .takeIf { it.isNotEmpty() }
+                        ?.map { (column, order) ->
+                            if (column !in columns) {
+                                throw IllegalArgumentException("Column '$column' not found in the CSV")
+                            }
+
+                            val comparator =
+                                Comparator<List<Cell>> { row1, row2 ->
+                                    val cell1 = row1.first { it.column == column }.value.toString()
+                                    val cell2 = row2.first { it.column == column }.value.toString()
+                                    cell1.compareTo(cell2)
+                                }
+
+                            when (order) {
+                                SortOrder.ASC -> comparator
+                                SortOrder.DESC -> comparator.reversed()
+                            }
+                        }
+                        ?.reduce { acc, comparator -> acc.then(comparator) }
+
+                val sortedRows = comparators?.let { rows.sortedWith(it) } ?: rows
+                val body = sortedRows.joinToString("\n") { row -> row.joinToString(",") { it.value.toString() } }
+
+                return "$header\n$body"
+            }
+
+            override fun toString(): String = toString(default = "")
+        }
 
     }
 

@@ -3,13 +3,14 @@
 package com.dzikoysk.ksb
 
 import ksb
+import ksb.Csv.SortOrder.DESC
 import ksb.IO.readAsObject
-import ksb.IO.readText
 import ksb.Serialization.convertTo
 import ksb.Serialization.toJson
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
+import kotlin.test.assertEquals
 
 class KsbTest {
 
@@ -71,6 +72,49 @@ class KsbTest {
             assert(ksb.fs.read(path) == listOf("Młynarz"))
         }
 
+    }
+
+    @Nested
+    inner class Csv {
+        @Test
+        fun `csv rows works`() {
+            val elements = listOf(1, 2, 3)
+
+            val result = ksb.csv.rows(elements) { data ->
+                cell { "input" to data }
+                cell { "double" to data * 2 }
+                cell { "triple" to data * 3 }
+            }
+
+            assertEquals(
+                """
+                input,double,triple
+                3,6,9
+                2,4,6
+                1,2,3
+                """.trimIndent(),
+                result.toString(
+                    sortedBy = listOf("triple" to DESC)
+                )
+            )
+        }
+
+        @Test
+        fun `csv columns works`() {
+            assertEquals(
+                """
+                input,double,triple
+                1,2,3
+                2,4,6
+                3,6,9
+                """.trimIndent(),
+                ksb.csv(
+                    "input" to listOf(1, 2, 3),
+                    "double" to listOf(2, 4, 6),
+                    "triple" to listOf(3, 6, 9),
+                ).toString()
+            )
+        }
     }
 
 }
