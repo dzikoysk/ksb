@@ -55,7 +55,18 @@ class KsbTest {
                         .use { (_, url) -> ksb.http.gql.query<MonkeData>("$url/graphql", mapOf("x-api-key" to "123")) { "query Monke { name }" } }
 
                 assert(response.isSuccess)
-                assert(response.get().data.monke == Monke("Młynarz"))
+                assert(response.get().monke == Monke("Młynarz"))
+            }
+
+            @Test
+            fun `graphql error works`() {
+                val response =
+                    ksb.http.server
+                        .start { post("/graphql") { it.result("""{ "errors": [ { "message": "Bad Request" } ] }""") } }
+                        .use { (_, url) -> ksb.http.gql.query<Monke>("$url/graphql", mapOf("x-api-key" to "123")) { "query Monke { name }" } }
+
+                assert(response.isFailure)
+                assertEquals("Bad Request", response.error().message)
             }
         }
     }

@@ -9,6 +9,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.javalin.Javalin
 import io.javalin.router.JavalinDefaultRouting
 import ksb.IO.readAsObject
+import ksb.IO.readText
 import ksb.Serialization.convertTo
 import ksb.Serialization.toJson
 import java.io.Closeable
@@ -130,12 +131,25 @@ object ksb {
                 val query: String,
             )
 
-            data class Response<T>(
-                val data: T,
-                val errors: List<Any>?,
+            data class Response<T : Any?>(
+                val data: T?,
+                val errors: List<Error>?,
+            ) {
+                data class Error(
+                    val message: String,
+                )
+            }
+
+            data class ErrorResponse(
+                val status: Int,
+                val message: String,
             )
 
-            inline fun <reified T> query(url: String, headers: Map<String, Any>, query: () -> String): Result<Response<T>, KsbHttpResponse> =
+            inline fun <reified T : Any?> query(
+                url: String,
+                headers: Map<String, Any>,
+                query: () -> String,
+            ): Result<T, ErrorResponse> =
                 post(
                     url = url,
                     value = Query(query = query()).toJson(),
@@ -144,10 +158,16 @@ object ksb {
                             "Content-Type" to "application/json",
                             "Accept" to "application/json",
                         ) + headers,
-                ).let {
-                    when (it.statusCode) {
-                        in 200..299 -> Result.success(it.body.readAsObject<Response<T>>())
-                        else -> Result.failure(it)
+                ).let { response ->
+                    when (response.statusCode) {
+                        in 200..299 ->
+                            response.body.readAsObject<Response<T>>().let { gqlResponse ->
+                                when {
+                                    gqlResponse.errors.isNullOrEmpty() -> Result.success(gqlResponse.data!!)
+                                    else -> Result.failure(ErrorResponse(response.statusCode, gqlResponse.errors.joinToString { it.message }))
+                                }
+                            }
+                        else -> Result.failure(ErrorResponse(response.statusCode, response.body.readText()))
                     }
                 }
 
