@@ -10,6 +10,8 @@ import ksb.Serialization.toJson
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
+import java.time.Duration
+import java.util.function.Function
 import kotlin.test.assertEquals
 
 class KsbTest {
@@ -94,15 +96,24 @@ class KsbTest {
             val result = ksb.csv.rows(elements) { data ->
                 cell { "input" to data }
                 cell { "double" to data * 2 }
-                cell { "triple" to data * 3 }
+                cell { "triple" to when (data) {
+                    1 -> Duration.ofSeconds(1)
+                    2 -> Duration.ofSeconds(12)
+                    3 -> Duration.ofSeconds(22)
+                    else -> error("Unexpected data")
+                } }
+            }
+
+            ksb.csv.addFormatter<Duration> { duration ->
+                duration?.let { "${it.toMinutes() }min" } ?: ""
             }
 
             assertEquals(
                 """
                 input,double,triple
-                3,6,9
-                2,4,6
-                1,2,3
+                3,6,0min
+                2,4,0min
+                1,2,0min
                 """.trimIndent(),
                 result.toString(
                     sortedBy = listOf("triple" to DESC)

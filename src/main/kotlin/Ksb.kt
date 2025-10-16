@@ -14,6 +14,7 @@ import ksb.Serialization.convertTo
 import ksb.Serialization.toJson
 import java.io.Closeable
 import java.io.InputStream
+import java.math.BigDecimal
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -21,6 +22,9 @@ import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.util.function.Function
+import kotlin.reflect.KClass
+import kotlin.reflect.full.isSuperclassOf
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.typeOf
 
@@ -227,6 +231,24 @@ object ksb {
 
     object Csv {
 
+        val defaultComparators = mutableMapOf<KClass<out Any>, Comparator<out Any?>>()
+        val defaultFormatters = mutableMapOf<KClass<out Any>, Function<out Any?, String>>()
+
+        init {
+            addComparator<Comparable<Any?>> { a, b -> a?.compareTo(b) ?: if (b == null) 0 else -1 }
+            addComparator<Any> { a, b -> a.toString().compareTo(b.toString()) }
+
+            addFormatter<Any> { it.toString() }
+        }
+
+        inline fun <reified T : Any> addComparator(comparator: Comparator<T?>) {
+            defaultComparators[T::class] = comparator
+        }
+
+        inline fun <reified T : Any> addFormatter(formatter: Function<T?, String>) {
+            defaultFormatters[T::class] = formatter
+        }
+
         enum class SortOrder {
             ASC, DESC
         }
@@ -298,8 +320,6 @@ object ksb {
                 }
 
                 val columns = rows.first().map { it.column }
-                val header = columns.joinToString(",")
-
                 val comparators =
                     sortedBy
                         .takeIf { it.isNotEmpty() }
@@ -308,11 +328,21 @@ object ksb {
                                 throw IllegalArgumentException("Column '$column' not found in the CSV")
                             }
 
+                            val comparators = defaultComparators.toSortedMap(Utils.classComparator)
                             val comparator =
                                 Comparator<List<Cell>> { row1, row2 ->
-                                    val cell1 = row1.first { it.column == column }.value.toString()
-                                    val cell2 = row2.first { it.column == column }.value.toString()
-                                    cell1.compareTo(cell2)
+                                    val cell1 = row1.first { it.column == column }.value
+                                    val cell2 = row2.first { it.column == column }.value
+                                    val cellClass = listOfNotNull(cell1, cell2).firstOrNull()?.let { it::class } ?: Any::class
+
+                                    @Suppress("UNCHECKED_CAST")
+                                    val comparator =
+                                        comparators
+                                            .entries
+                                            .firstOrNull { (key, _) -> key == cellClass || key.isSuperclassOf(cellClass) }
+                                            ?.value as Comparator<Any?>
+
+                                    comparator.compare(cell1, cell2)
                                 }
 
                             when (order) {
@@ -321,14 +351,42 @@ object ksb {
                             }
                         }
                         ?.reduce { acc, comparator -> acc.then(comparator) }
-
                 val sortedRows = comparators?.let { rows.sortedWith(it) } ?: rows
-                val body = sortedRows.joinToString("\n") { row -> row.joinToString(",") { it.value.toString() } }
+
+                val formatters = defaultFormatters.toSortedMap(Utils.classComparator)
+                val body = sortedRows.joinToString("\n") { row ->
+                    row.joinToString(",") { cell ->
+                        @Suppress("UNCHECKED_CAST")
+                        val formatter =
+                            formatters
+                                .entries
+                                .first { (key, _) -> cell.value != null && (key == cell.value::class || key.isSuperclassOf(cell.value::class)) }
+                                .value as Function<Any?, String>
+
+                        formatter.apply(cell.value)
+                    }
+                }
+                val header = columns.joinToString(",")
 
                 return "$header\n$body"
             }
 
             override fun toString(): String = toString(default = "")
+        }
+
+    }
+
+    val utils = Utils
+
+    object Utils {
+
+        val classComparator = Comparator<KClass<*>> { a, b ->
+            when {
+                a == b -> 0
+                a.isSuperclassOf(b) -> 1
+                b.isSuperclassOf(a) -> -1
+                else -> 0
+            }
         }
 
     }
