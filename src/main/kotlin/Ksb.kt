@@ -253,7 +253,7 @@ object ksb {
             ASC, DESC
         }
 
-        operator fun invoke(vararg columns: Pair<ColumnName, List<Any?>>): CsvSource {
+        operator fun invoke(vararg columns: Pair<ColumnName, List<Any>>): CsvSource {
             val csvSource = CsvSource()
 
             val rowCount =
@@ -287,23 +287,39 @@ object ksb {
             data class Cell(
                 val column: ColumnName,
                 val value: Any?,
+                val type: KClass<out Any> = value?.let { it::class } ?: Any::class
             )
 
             private val rows = mutableListOf<List<Cell>>()
             private val currentRow = mutableListOf<Cell>()
 
-            fun cell(body: () -> Pair<ColumnName, Any?>) {
+            fun cell(body: () -> Pair<ColumnName, Any>) {
                 body().let { (column, value) ->
                     currentRow.add(
                         Cell(
                             column = column,
-                            value = when (value) {
-                                is String -> "\"${value.replace("\"", "\"\"")}\""
-                                else -> value
-                            },
+                            value = value,
                         )
                     )
                 }
+            }
+
+            @JvmName("cellNullable")
+            inline fun <reified T : Any?> cell(body: () -> Pair<ColumnName, T>) {
+                body().let { (column, value) ->
+                    @Suppress("UNCHECKED_CAST")
+                    addCell(
+                        Cell(
+                            column = column,
+                            value = value,
+                            type = T::class as KClass<out Any>
+                        )
+                    )
+                }
+            }
+
+            fun addCell(cell: Cell) {
+                currentRow.add(cell)
             }
 
             internal fun flushRow() {
@@ -331,9 +347,13 @@ object ksb {
                             val comparators = defaultComparators.toSortedMap(Utils.classComparator)
                             val comparator =
                                 Comparator<List<Cell>> { row1, row2 ->
-                                    val cell1 = row1.first { it.column == column }.value
-                                    val cell2 = row2.first { it.column == column }.value
-                                    val cellClass = listOfNotNull(cell1, cell2).firstOrNull()?.let { it::class } ?: Any::class
+                                    val cell1 = row1.first { it.column == column }
+                                    val cell2 = row2.first { it.column == column }
+
+                                    val cellClass = listOfNotNull(
+                                        cell1.type.takeIf { it != Any::class },
+                                        cell2.type.takeIf { it != Any::class }
+                                    ).firstOrNull() ?: Any::class
 
                                     @Suppress("UNCHECKED_CAST")
                                     val comparator =
@@ -342,7 +362,7 @@ object ksb {
                                             .firstOrNull { (key, _) -> key == cellClass || key.isSuperclassOf(cellClass) }
                                             ?.value as Comparator<Any?>
 
-                                    comparator.compare(cell1, cell2)
+                                    comparator.compare(cell1.value, cell2.value)
                                 }
 
                             when (order) {
@@ -354,16 +374,27 @@ object ksb {
                 val sortedRows = comparators?.let { rows.sortedWith(it) } ?: rows
 
                 val formatters = defaultFormatters.toSortedMap(Utils.classComparator)
+                val formatterByType = mutableMapOf<KClass<out Any>, Function<Any?, String>?>()
+
                 val body = sortedRows.joinToString("\n") { row ->
                     row.joinToString(",") { cell ->
-                        @Suppress("UNCHECKED_CAST")
-                        val formatter =
+                        val value = cell.value
+                        val type = cell.type
+
+                        val formatter = formatterByType.getOrPut(type) {
+                            @Suppress("UNCHECKED_CAST")
                             formatters
                                 .entries
-                                .first { (key, _) -> cell.value != null && (key == cell.value::class || key.isSuperclassOf(cell.value::class)) }
-                                .value as Function<Any?, String>
+                                .firstOrNull { (key, _) -> value != null && (key == type || key.isSuperclassOf(type) )}
+                                ?.value as Function<Any?, String>?
+                        }
 
-                        formatter.apply(cell.value)
+                        val result = formatter?.apply(value) ?: cell.value.toString()
+
+                        when {
+                            result.contains("\"") -> '"' + result.replace("\"", "\"\"") + '"'
+                            else -> result
+                        }
                     }
                 }
                 val header = columns.joinToString(",")

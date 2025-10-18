@@ -102,6 +102,7 @@ class KsbTest {
                     3 -> Duration.ofSeconds(22)
                     else -> error("Unexpected data")
                 } }
+                cell<Duration?> { "quad" to null }
             }
 
             ksb.csv.addFormatter<Duration> { duration ->
@@ -110,10 +111,10 @@ class KsbTest {
 
             assertEquals(
                 """
-                input,double,triple
-                3,6,0min
-                2,4,0min
-                1,2,0min
+                input,double,triple,quad
+                3,6,0min,
+                2,4,0min,
+                1,2,0min,
                 """.trimIndent(),
                 result.toString(
                     sortedBy = listOf("triple" to DESC)
