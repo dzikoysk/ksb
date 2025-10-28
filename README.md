@@ -9,7 +9,7 @@ repository {
 }
 
 dependencies {
-    implementation("com.dzikoysk:ksb:0.0.5-SNAPSHOT")
+    implementation("com.dzikoysk:ksb:0.0.7-SNAPSHOT")
 }
 ```
 

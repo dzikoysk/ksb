@@ -235,10 +235,20 @@ object ksb {
         val defaultFormatters = mutableMapOf<KClass<out Any>, Function<out Any?, String>>()
 
         init {
-            addComparator<Comparable<Any?>> { a, b -> a?.compareTo(b) ?: if (b == null) 0 else -1 }
-            addComparator<Any> { a, b -> a.toString().compareTo(b.toString()) }
-
+            addComparator<Comparable<Any?>> { a, b -> compare(a, b) }
+            addComparator<Any> { a, b -> compare(a, b) }
             addFormatter<Any> { it.toString() }
+        }
+
+        private fun compare(a: Any?, b: Any?): Int {
+            @Suppress("UNCHECKED_CAST")
+            return when {
+                a == null && b == null -> 0
+                a == null -> -1
+                b == null -> 1
+                a is Comparable<*> && b is Comparable<*> && a::class == b::class -> (a as Comparable<Any?>).compareTo(b)
+                else -> a.toString().compareTo(b.toString())
+            }
         }
 
         inline fun <reified T : Any> addComparator(comparator: Comparator<T?>) {
@@ -344,7 +354,11 @@ object ksb {
                                 throw IllegalArgumentException("Column '$column' not found in the CSV")
                             }
 
-                            val comparators = defaultComparators.toSortedMap(Utils.classComparator)
+                            val comparators =
+                                defaultComparators
+                                    .entries
+                                    .sortedWith { a, b -> Utils.classComparator.compare(a.key, b.key) }
+
                             val comparator =
                                 Comparator<List<Cell>> { row1, row2 ->
                                     val cell1 = row1.first { it.column == column }
@@ -358,7 +372,6 @@ object ksb {
                                     @Suppress("UNCHECKED_CAST")
                                     val comparator =
                                         comparators
-                                            .entries
                                             .firstOrNull { (key, _) -> key == cellClass || key.isSuperclassOf(cellClass) }
                                             ?.value as Comparator<Any?>
 
@@ -373,7 +386,11 @@ object ksb {
                         ?.reduce { acc, comparator -> acc.then(comparator) }
                 val sortedRows = comparators?.let { rows.sortedWith(it) } ?: rows
 
-                val formatters = defaultFormatters.toSortedMap(Utils.classComparator)
+                val formatters =
+                    defaultFormatters
+                        .entries
+                        .sortedWith { a, b -> Utils.classComparator.compare(a.key, b.key) }
+
                 val formatterByType = mutableMapOf<KClass<out Any>, Function<Any?, String>?>()
 
                 val body = sortedRows.joinToString("\n") { row ->
@@ -384,12 +401,14 @@ object ksb {
                         val formatter = formatterByType.getOrPut(type) {
                             @Suppress("UNCHECKED_CAST")
                             formatters
-                                .entries
                                 .firstOrNull { (key, _) -> value != null && (key == type || key.isSuperclassOf(type) )}
                                 ?.value as Function<Any?, String>?
                         }
 
-                        val result = formatter?.apply(value) ?: cell.value.toString()
+                        val result =
+                            formatter
+                                ?.apply(value)
+                                ?: cell.value.toString()
 
                         when {
                             result.contains("\"") -> '"' + result.replace("\"", "\"\"") + '"'

@@ -3,6 +3,7 @@
 package com.dzikoysk.ksb
 
 import ksb
+import ksb.Csv.SortOrder.ASC
 import ksb.Csv.SortOrder.DESC
 import ksb.IO.readAsObject
 import ksb.Serialization.convertTo
@@ -91,33 +92,42 @@ class KsbTest {
     inner class Csv {
         @Test
         fun `csv rows works`() {
-            val elements = listOf(1, 2, 3)
+            val elements = listOf(1, 2, 3, 4)
 
             val result = ksb.csv.rows(elements) { data ->
-                cell { "input" to data }
+                cell<Int?> { "input" to data.takeIf { data != 4 } }
                 cell { "double" to data * 2 }
-                cell { "triple" to when (data) {
+                cell<Duration?> { "triple" to when (data) {
                     1 -> Duration.ofSeconds(1)
                     2 -> Duration.ofSeconds(12)
                     3 -> Duration.ofSeconds(22)
+                    4 -> null
                     else -> error("Unexpected data")
                 } }
                 cell<Duration?> { "quad" to null }
             }
 
             ksb.csv.addFormatter<Duration> { duration ->
-                duration?.let { "${it.toMinutes() }min" } ?: ""
+                duration?.let { "${it.toMinutes() }min" } ?: "none"
+            }
+            ksb.csv.addFormatter<Int> { value ->
+                value?.toString() ?: "unavailable"
             }
 
             assertEquals(
                 """
                 input,double,triple,quad
-                3,6,0min,
-                2,4,0min,
-                1,2,0min,
+                3,6,0min,none
+                2,4,0min,none
+                1,2,0min,none
+                unavailable,8,none,none
                 """.trimIndent(),
                 result.toString(
-                    sortedBy = listOf("triple" to DESC)
+                    sortedBy = listOf(
+                        "triple" to DESC,
+                        "quad" to DESC,
+                        "input" to ASC,
+                    )
                 )
             )
         }

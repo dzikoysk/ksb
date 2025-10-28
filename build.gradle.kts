@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "com.dzikoysk"
-version = "0.0.6-SNAPSHOT"
+version = "0.0.7-SNAPSHOT"
 
 repositories {
     mavenCentral()
