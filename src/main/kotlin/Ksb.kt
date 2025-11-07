@@ -401,7 +401,7 @@ object ksb {
                         val formatter = formatterByType.getOrPut(type) {
                             @Suppress("UNCHECKED_CAST")
                             formatters
-                                .firstOrNull { (key, _) -> value != null && (key == type || key.isSuperclassOf(type) )}
+                                .firstOrNull { (key, _) -> key == type || key.isSuperclassOf(type)}
                                 ?.value as Function<Any?, String>?
                         }
 
